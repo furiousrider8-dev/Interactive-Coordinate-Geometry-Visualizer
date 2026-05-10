@@ -1,0 +1,1385 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Coordinate Geometry Visualizer</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600&family=Syne:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0d0e12;
+    --bg2: #13141a;
+    --bg3: #1a1b23;
+    --bg4: #21222d;
+    --border: rgba(255,255,255,0.07);
+    --border2: rgba(255,255,255,0.12);
+    --text: #e8e9f0;
+    --text2: #8b8d9e;
+    --text3: #565869;
+    --accent: #5b8af5;
+    --accent2: #3d6de0;
+    --green: #3ecf8e;
+    --orange: #f59e3d;
+    --red: #f56565;
+    --purple: #a78bfa;
+    --teal: #2dd4bf;
+    --pink: #f472b6;
+    --radius: 8px;
+    --radius-lg: 12px;
+  }
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; overflow: hidden; background: var(--bg); color: var(--text); font-family: 'JetBrains Mono', monospace; }
+
+  #app {
+    display: grid;
+    grid-template-rows: 44px 1fr 36px;
+    grid-template-columns: 270px 1fr;
+    height: 100vh;
+    gap: 0;
+  }
+
+  /* ── Toolbar ── */
+  #toolbar {
+    grid-column: 1 / -1;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 0 14px;
+    background: var(--bg2);
+    border-bottom: 1px solid var(--border);
+    flex-wrap: nowrap;
+    overflow-x: auto;
+  }
+  .app-title {
+    font-family: 'Syne', sans-serif;
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--accent);
+    letter-spacing: .04em;
+    white-space: nowrap;
+    margin-right: 8px;
+  }
+  .tb-sep { width: 1px; height: 20px; background: var(--border); margin: 0 4px; flex-shrink: 0; }
+  .tb-label { font-size: 10px; color: var(--text3); text-transform: uppercase; letter-spacing: .08em; white-space: nowrap; }
+  .tb-btn {
+    font-size: 11px; font-family: 'JetBrains Mono', monospace;
+    padding: 4px 11px; border-radius: var(--radius);
+    border: 1px solid var(--border2);
+    background: transparent; color: var(--text2); cursor: pointer;
+    transition: all .15s; white-space: nowrap; flex-shrink: 0;
+  }
+  .tb-btn:hover { background: var(--bg3); color: var(--text); }
+  .tb-btn.active { background: rgba(91,138,245,0.15); border-color: var(--accent); color: var(--accent); }
+  .tb-spacer { flex: 1; }
+  .tgl {
+    font-size: 10px; font-family: 'JetBrains Mono', monospace;
+    padding: 3px 9px; border-radius: 20px;
+    border: 1px solid var(--border);
+    background: transparent; color: var(--text3); cursor: pointer;
+    transition: all .15s; white-space: nowrap; flex-shrink: 0;
+  }
+  .tgl:hover { border-color: var(--border2); color: var(--text2); }
+  .tgl.on { background: rgba(62,207,142,0.1); color: var(--green); border-color: rgba(62,207,142,0.3); }
+
+  /* ── Sidebar ── */
+  #sidebar {
+    background: var(--bg2);
+    border-right: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    overflow-y: auto;
+    scrollbar-width: thin;
+    scrollbar-color: var(--bg4) transparent;
+  }
+  #sidebar::-webkit-scrollbar { width: 4px; }
+  #sidebar::-webkit-scrollbar-thumb { background: var(--bg4); border-radius: 2px; }
+
+  .sidebar-section {
+    padding: 12px 14px;
+    border-bottom: 1px solid var(--border);
+  }
+  .section-title {
+    font-size: 9px; letter-spacing: .1em; text-transform: uppercase;
+    color: var(--text3); margin-bottom: 8px; font-weight: 600;
+  }
+
+  .fn-row {
+    display: flex; align-items: center; gap: 6px;
+    padding: 5px 8px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background: var(--bg3);
+    margin-bottom: 5px;
+    transition: border-color .15s;
+  }
+  .fn-row:focus-within { border-color: var(--border2); }
+  .fn-dot { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; cursor: pointer; transition: transform .15s; }
+  .fn-dot:hover { transform: scale(1.3); }
+  .fn-input {
+    flex: 1; border: none; background: transparent;
+    font-size: 12px; font-family: 'JetBrains Mono', monospace;
+    color: var(--text); outline: none; min-width: 0;
+  }
+  .fn-input::placeholder { color: var(--text3); }
+  .fn-del {
+    background: none; border: none; cursor: pointer;
+    color: var(--text3); font-size: 14px; padding: 0 1px; line-height: 1;
+    transition: color .15s;
+  }
+  .fn-del:hover { color: var(--red); }
+  .fn-err { border-color: rgba(245,101,101,0.4); }
+
+  .add-fn {
+    width: 100%; padding: 6px;
+    border: 1px dashed var(--border2);
+    border-radius: var(--radius);
+    background: transparent; font-size: 11px;
+    color: var(--text3); cursor: pointer;
+    font-family: 'JetBrains Mono', monospace;
+    transition: all .15s;
+  }
+  .add-fn:hover { border-color: var(--accent); color: var(--accent); background: rgba(91,138,245,0.05); }
+
+  .preset-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; }
+  .preset-btn {
+    font-size: 11px; padding: 5px 8px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background: var(--bg3); cursor: pointer;
+    color: var(--text2); font-family: 'JetBrains Mono', monospace;
+    text-align: left; transition: all .15s;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .preset-btn:hover { background: var(--bg4); color: var(--text); border-color: var(--accent); }
+
+  .ctrl-row { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+  .ctrl-lbl { font-size: 10px; color: var(--text3); min-width: 78px; }
+  .ctrl-val { font-size: 11px; color: var(--text2); min-width: 36px; text-align: right; }
+  input[type=range] {
+    flex: 1; -webkit-appearance: none; appearance: none;
+    height: 3px; background: var(--bg4); border-radius: 2px; outline: none; cursor: pointer;
+  }
+  input[type=range]::-webkit-slider-thumb {
+    -webkit-appearance: none; width: 13px; height: 13px;
+    border-radius: 50%; background: var(--accent); cursor: pointer;
+    border: 2px solid var(--bg2);
+  }
+  input[type=range]::-moz-range-thumb {
+    width: 13px; height: 13px; border-radius: 50%;
+    background: var(--accent); cursor: pointer; border: 2px solid var(--bg2);
+  }
+  select {
+    flex: 1; font-size: 11px; font-family: 'JetBrains Mono', monospace;
+    border: 1px solid var(--border2); border-radius: var(--radius);
+    padding: 4px 6px; background: var(--bg3); color: var(--text); outline: none; cursor: pointer;
+  }
+  input[type=number] {
+    flex: 1; font-size: 11px; font-family: 'JetBrains Mono', monospace;
+    border: 1px solid var(--border); border-radius: var(--radius);
+    padding: 4px 6px; background: var(--bg3); color: var(--text); outline: none;
+    -moz-appearance: textfield;
+  }
+  input[type=number]::-webkit-inner-spin-button,
+  input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; }
+  input[type=number]:focus { border-color: var(--border2); }
+
+  .eq-display {
+    padding: 7px 10px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    font-size: 12px;
+    color: var(--text2);
+    background: var(--bg3);
+    letter-spacing: .02em;
+  }
+  .eq-display span { color: var(--accent); }
+  .eq-note { font-size: 10px; color: var(--text3); margin: 6px 0 4px; }
+
+  .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 5px; }
+
+  /* ── Canvas ── */
+  #canvas-wrap {
+    position: relative;
+    background: var(--bg);
+    cursor: crosshair;
+    overflow: hidden;
+  }
+  canvas { display: block; width: 100%; height: 100%; }
+
+  /* ── Status bar ── */
+  #statusbar {
+    grid-column: 1 / -1;
+    display: flex; align-items: center; gap: 20px;
+    padding: 0 14px;
+    background: var(--bg2);
+    border-top: 1px solid var(--border);
+    font-size: 10px; font-family: 'JetBrains Mono', monospace;
+    color: var(--text3);
+    overflow-x: auto; white-space: nowrap;
+  }
+  .stat { display: flex; gap: 5px; align-items: center; }
+  .stat-val { color: var(--text2); }
+  .stat-hl { color: var(--orange); }
+
+  /* ── Panels visibility ── */
+  #line-panel, #wave-panel, #param-panel { display: none; }
+  #fn-panel { display: block; }
+
+  /* ── How-it-works boxes ── */
+  .how-box {
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    border-left: 2px solid var(--accent);
+    border-radius: var(--radius);
+    padding: 9px 11px;
+    margin-bottom: 10px;
+    font-size: 10px;
+    color: var(--text3);
+    line-height: 1.8;
+  }
+  .how-title {
+    font-size: 9px; font-weight: 700; letter-spacing: .1em;
+    color: var(--accent); margin-bottom: 5px;
+  }
+  .how-box .hl  { color: var(--text2); font-weight: 500; }
+  .how-box .hl2 { color: var(--text); font-weight: 600; }
+
+  /* ── Identities panel ── */
+  #ids-panel { overflow-y: auto; }
+  .id-group { margin-bottom: 3px; }
+  .id-group-title {
+    font-size: 10px; font-weight: 600; color: var(--text2);
+    padding: 6px 4px; cursor: pointer; user-select: none;
+    display: flex; align-items: center; gap: 6px;
+    border-radius: 5px; transition: background .12s;
+    letter-spacing: .02em;
+  }
+  .id-group-title:hover { background: var(--bg3); }
+  .id-group-title span { color: var(--purple); font-size: 9px; transition: transform .15s; display:inline-block; }
+  .id-group-title.open span { transform: rotate(90deg); }
+  .id-group-body {
+    display: none;
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 6px 8px;
+    margin-bottom: 3px;
+  }
+  .id-group-body.open { display: block; }
+  .id-row {
+    display: flex; align-items: baseline; justify-content: space-between;
+    gap: 6px; padding: 3px 0;
+    border-bottom: 1px solid var(--border);
+    font-size: 10.5px;
+  }
+  .id-row:last-child { border-bottom: none; }
+  .id-eq { color: var(--text); font-family: 'JetBrains Mono', monospace; flex:1; }
+  .id-note { color: var(--text3); font-size: 9px; white-space: nowrap; flex-shrink:0; }
+  .id-note-block { font-size: 9px; color: var(--text3); border-bottom: none !important; padding-top: 5px; }
+  .id-note-block .hl-g { color: var(--green); }
+
+  /* ── Arrow popup ── */
+  #arrow-popup {
+    display: none;
+    position: absolute;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -54%);
+    width: 300px;
+    background: var(--bg2);
+    border: 1px solid rgba(244,114,182,0.35);
+    border-radius: var(--radius-lg);
+    padding: 16px;
+    z-index: 20;
+    box-shadow: 0 8px 40px rgba(0,0,0,0.6), 0 0 0 1px rgba(244,114,182,0.1);
+    animation: popIn .18s ease;
+  }
+  #arrow-popup.visible { display: block; }
+  @keyframes popIn {
+    from { opacity:0; transform: translate(-50%,-52%) scale(0.95); }
+    to   { opacity:1; transform: translate(-50%,-54%) scale(1); }
+  }
+  #arrow-popup-close {
+    position: absolute; top: 10px; right: 12px;
+    background: none; border: none; cursor: pointer;
+    color: var(--text3); font-size: 18px; line-height: 1;
+    transition: color .15s;
+  }
+  #arrow-popup-close:hover { color: var(--text); }
+
+  /* ── Tooltip ── */
+  #tooltip {
+    position: absolute; pointer-events: none;
+    background: var(--bg2); border: 1px solid var(--border2);
+    border-radius: var(--radius); padding: 6px 10px;
+    font-size: 11px; color: var(--text2); line-height: 1.7;
+    display: none; z-index: 10; min-width: 140px;
+  }
+  #tooltip.visible { display: block; }
+  #tooltip strong { color: var(--text); font-weight: 500; }
+</style>
+</head>
+<body>
+<div id="app">
+
+  <!-- Toolbar -->
+  <div id="toolbar">
+    <span class="app-title">∫ grapher</span>
+    <div class="tb-sep"></div>
+    <span class="tb-label">mode</span>
+    <button class="tb-btn active" id="mode-fn"    onclick="setMode('fn')">f(x) plot</button>
+    <button class="tb-btn"        id="mode-line"  onclick="setMode('line')">lines</button>
+    <button class="tb-btn"        id="mode-wave"  onclick="setMode('wave')">waves</button>
+    <button class="tb-btn"        id="mode-param" onclick="setMode('param')">parametric</button>
+    <button class="tb-btn"        id="mode-ids"   onclick="setMode('ids')" style="border-color:rgba(167,139,250,0.4);color:var(--purple)">&#x03A3; identities</button>
+    <div class="tb-sep"></div>
+    <button class="tgl on" id="tgl-grid"   onclick="toggle('grid',this)">grid</button>
+    <button class="tgl on" id="tgl-axes"   onclick="toggle('axes',this)">axes</button>
+    <button class="tgl on" id="tgl-labels" onclick="toggle('labels',this)">labels</button>
+    <button class="tgl"    id="tgl-slope"  onclick="toggle('slope',this)">tangent</button>
+    <button class="tgl"    id="tgl-deriv"  onclick="toggle('deriv',this)">derivative</button>
+    <button class="tgl"    id="tgl-zeros"  onclick="toggle('zeros',this)">zeros</button>
+    <div class="tb-spacer"></div>
+    <button class="tb-btn" onclick="resetView()" title="Reset pan & zoom">reset view</button>
+    <button class="tb-btn" onclick="exportPNG()" title="Save as PNG">export PNG</button>
+  </div>
+
+  <!-- Sidebar -->
+  <div id="sidebar">
+
+    <!-- f(x) panel -->
+    <div id="fn-panel" class="sidebar-section">
+      <p class="section-title">Functions</p>
+      <div class="how-box">
+        <div class="how-title">HOW IT WORKS</div>
+        Type any expression in <span class="hl">x</span> and it plots <span class="hl">y = f(x)</span> across the viewport in real time.<br>
+        <span class="hl2">Multiple functions</span> — add as many as you like; each gets its own color. Click the color dot to cycle it.<br>
+        <span class="hl2">Tangent toggle</span> — hover the graph with <em>tangent</em> on to see the instantaneous slope (derivative) at your cursor as a line.<br>
+        <span class="hl2">Derivative toggle</span> — overlays <span class="hl">f′(x)</span> as a dashed curve computed numerically.<br>
+        <span class="hl2">Zeros toggle</span> — marks every x-intercept using bisection search.<br>
+        Syntax: use <span class="hl">^</span> for powers, <span class="hl">*</span> for multiply, <span class="hl">pi</span>, <span class="hl">e</span>, <span class="hl">phi</span> as constants.
+      </div>
+      <div id="fn-list"></div>
+      <button class="add-fn" onclick="addFn('')">+ add function</button>
+    </div>
+
+    <!-- Line panel -->
+    <div id="line-panel" class="sidebar-section">
+      <p class="section-title">Line — slope-intercept  y = mx + b</p>
+      <div class="how-box">
+        <div class="how-title">HOW IT WORKS</div>
+        Every straight line can be written as <span class="hl">y = mx + b</span>.<br>
+        <span class="hl2">m (slope)</span> — rise over run. Positive = tilts up right, negative = tilts down right. m = 0 is horizontal.<br>
+        <span class="hl2">b (y-intercept)</span> — where the line crosses the y-axis (at x = 0).<br>
+        <span class="hl2">x-intercept</span> — where y = 0, found at x = −b/m. Shown as a dot on the axis.<br>
+        <span class="hl2">Two-point form</span> — enter any two points and m and b are computed automatically using m = (y₂−y₁)/(x₂−x₁).<br>
+        <span class="hl2">Parallel lines</span> share the same m. <span class="hl2">Perpendicular lines</span> have slopes that multiply to −1 (m₂ = −1/m₁).
+      </div>
+      <div style="display:flex;flex-direction:column;gap:6px;margin-bottom:10px">
+        <div class="ctrl-row">
+          <span class="ctrl-lbl">slope (m)</span>
+          <input type="range" id="line-m-sl" min="-10" max="10" step="0.1" value="1" oninput="syncLineSlider('m',this.value)">
+          <input type="number" id="line-m" value="1" step="0.1" style="width:60px;flex:none" oninput="syncLineNum('m',this.value)">
+        </div>
+        <div class="ctrl-row">
+          <span class="ctrl-lbl">y-intercept (b)</span>
+          <input type="range" id="line-b-sl" min="-10" max="10" step="0.1" value="0" oninput="syncLineSlider('b',this.value)">
+          <input type="number" id="line-b" value="0" step="0.5" style="width:60px;flex:none" oninput="syncLineNum('b',this.value)">
+        </div>
+        <div class="eq-display">y = <span id="line-eq">x</span></div>
+      </div>
+      <p class="eq-note">Two-point form</p>
+      <div class="two-col" style="margin-bottom:6px">
+        <div class="fn-row"><span style="font-size:10px;color:var(--text3)">x₁</span><input id="p1x" class="fn-input" type="number" value="-2" oninput="lineFromPoints()"></div>
+        <div class="fn-row"><span style="font-size:10px;color:var(--text3)">y₁</span><input id="p1y" class="fn-input" type="number" value="1"  oninput="lineFromPoints()"></div>
+        <div class="fn-row"><span style="font-size:10px;color:var(--text3)">x₂</span><input id="p2x" class="fn-input" type="number" value="3"  oninput="lineFromPoints()"></div>
+        <div class="fn-row"><span style="font-size:10px;color:var(--text3)">y₂</span><input id="p2y" class="fn-input" type="number" value="4"  oninput="lineFromPoints()"></div>
+      </div>
+      <div class="eq-display" id="line-pt-info" style="font-size:10px;color:var(--text3)">—</div>
+    </div>
+
+    <!-- Wave panel -->
+    <div id="wave-panel" class="sidebar-section">
+      <p class="section-title">Wave parameters</p>
+      <div class="how-box">
+        <div class="how-title">HOW IT WORKS</div>
+        All waves here follow the form <span class="hl">y = A · wave(ωx + φ) + D</span>.<br>
+        <span class="hl2">A — amplitude</span>: peak height above (and below) the midline. Doubling A doubles the wave's height.<br>
+        <span class="hl2">ω — frequency</span>: how many full cycles fit in 2π units. Period = <span class="hl">2π / ω</span>, shown live below the sliders.<br>
+        <span class="hl2">φ — phase</span>: shifts the wave left/right. φ = π/2 turns a sine into a cosine.<br>
+        <span class="hl2">D — vertical shift</span>: moves the whole wave up or down, changing the midline from y = 0 to y = D.<br>
+        <span class="hl2">Sawtooth / square / triangle</span> are non-sinusoidal periodic waves — useful for understanding Fourier series decomposition.
+      </div>
+      <div class="ctrl-row"><span class="ctrl-lbl">type</span>
+        <select id="wave-type" onchange="draw()">
+          <option value="sin">sine</option>
+          <option value="cos">cosine</option>
+          <option value="tan">tangent</option>
+          <option value="sawtooth">sawtooth</option>
+          <option value="square">square wave</option>
+          <option value="triangle">triangle</option>
+        </select>
+      </div>
+      <div class="ctrl-row"><span class="ctrl-lbl">amplitude A</span><input type="range" id="w-amp"   min="0.1" max="5"    step="0.1"  value="1"    oninput="wv()"><span class="ctrl-val" id="w-amp-v">1.0</span></div>
+      <div class="ctrl-row"><span class="ctrl-lbl">frequency ω</span><input type="range" id="w-freq"  min="0.1" max="5"    step="0.1"  value="1"    oninput="wv()"><span class="ctrl-val" id="w-freq-v">1.0</span></div>
+      <div class="ctrl-row"><span class="ctrl-lbl">phase φ</span>    <input type="range" id="w-phase" min="-6.28" max="6.28" step="0.05" value="0"  oninput="wv()"><span class="ctrl-val" id="w-phase-v">0.00</span></div>
+      <div class="ctrl-row"><span class="ctrl-lbl">vertical shift</span><input type="range" id="w-vs"  min="-4" max="4"    step="0.1"  value="0"    oninput="wv()"><span class="ctrl-val" id="w-vs-v">0.0</span></div>
+      <div class="ctrl-row"><span class="ctrl-lbl">period</span><span class="ctrl-val" id="w-period" style="flex:1;text-align:left;color:var(--accent)">2π</span></div>
+      <div class="eq-display" style="margin-top:4px">y = <span id="wave-eq" style="color:var(--accent)">sin(x)</span></div>
+    </div>
+
+    <!-- Parametric panel -->
+    <div id="param-panel" class="sidebar-section">
+      <p class="section-title">Parametric curve  (x(t), y(t))</p>
+      <div style="background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius);padding:8px 10px;margin-bottom:8px;font-size:10px;color:var(--text3);line-height:1.75">
+        <div style="color:var(--accent);font-size:10px;font-weight:600;margin-bottom:4px;letter-spacing:.04em">HOW IT WORKS</div>
+        Plots <span style="color:var(--text2)">(x(t), y(t))</span> as <span style="color:var(--text2)">t</span> sweeps from 0 to its max value.<br>
+        <span style="color:var(--text2)">t range</span> — 6.28 (2&#960;) = one full revolution for trig curves.<br>
+        <span style="color:var(--text2)">smoothness</span> — sample count; raise for tight/dense curves.<br>
+        <span style="color:var(--text2)">scale</span> — multiplies both outputs uniformly. For <span style="color:var(--green)">cos(t), sin(t)</span> this is the radius directly. Set scale=3 for a circle of radius 3 without retyping expressions.
+      </div>
+      <div class="fn-row" style="margin-bottom:5px"><span style="font-size:11px;color:var(--text3);min-width:28px">x(t)</span><input id="param-x" class="fn-input" value="cos(t)" oninput="draw()"></div>
+      <div class="fn-row" style="margin-bottom:8px"><span style="font-size:11px;color:var(--text3);min-width:28px">y(t)</span><input id="param-y" class="fn-input" value="sin(t)" oninput="draw()"></div>
+      <div class="ctrl-row"><span class="ctrl-lbl">scale / radius</span><input type="range" id="param-scale" min="0.1" max="8" step="0.1" value="1" oninput="draw();document.getElementById('param-scale-v').textContent=parseFloat(this.value).toFixed(1)"><span class="ctrl-val" id="param-scale-v">1.0</span></div>
+      <div class="ctrl-row"><span class="ctrl-lbl">t &#8712; [0 &#8230;</span><input type="range" id="param-t" min="0.5" max="25.13" step="0.1" value="6.28" oninput="draw();document.getElementById('param-t-v').textContent=parseFloat(this.value).toFixed(2)"><span class="ctrl-val" id="param-t-v">6.28</span></div>
+      <div class="ctrl-row"><span class="ctrl-lbl">smoothness</span><input type="range" id="param-step" min="100" max="5000" step="100" value="1200" oninput="draw();document.getElementById('param-step-v').textContent=this.value"><span class="ctrl-val" id="param-step-v">1200</span></div>
+      <p class="eq-note" style="margin-top:4px">Presets</p>
+      <div class="preset-grid">
+        <button class="preset-btn" onclick="setParam('cos(t)','sin(t)',6.28)">circle</button>
+        <button class="preset-btn" onclick="setParam('t*cos(t)/6','t*sin(t)/6',25.1)">spiral</button>
+        <button class="preset-btn" onclick="setParam('sin(2*t)','cos(3*t)',6.28)">lissajous 2:3</button>
+        <button class="preset-btn" onclick="setParam('sin(3*t)','cos(5*t)',6.28)">lissajous 3:5</button>
+        <button class="preset-btn" onclick="setParam('2*cos(t)-cos(2*t)','2*sin(t)-sin(2*t)',6.28)">cardioid</button>
+        <button class="preset-btn" onclick="setParam('sin(t)','sin(2*t)',6.28)">figure-8</button>
+        <button class="preset-btn" onclick="setParam('(1+0.5*cos(9*t))*cos(t)','(1+0.5*cos(9*t))*sin(t)',6.28)">rose</button>
+        <button class="preset-btn" onclick="setParam('(2+cos(3*t/2))*cos(t)','(2+cos(3*t/2))*sin(t)',12.57)">trefoil</button>
+        <button class="preset-btn" onclick="setParam('16*sin(t)^3','13*cos(t)-5*cos(2*t)-2*cos(3*t)-cos(4*t)',6.28)">heart</button>
+        <button class="preset-btn" onclick="setParam('cos(t)+cos(6*t)/2','sin(t)+sin(6*t)/2',6.28)">epicycloid</button>
+      </div>
+    </div>
+
+    <!-- Identities panel -->
+    <div id="ids-panel" class="sidebar-section" style="display:none">
+      <p class="section-title">General identities &amp; reference</p>
+
+      <div class="id-group">
+        <div class="id-group-title" onclick="toggleIdGroup(this)"><span>&#9656;</span> Pythagorean</div>
+        <div class="id-group-body">
+          <div class="id-row"><span class="id-eq">sin²x + cos²x = 1</span></div>
+          <div class="id-row"><span class="id-eq">1 + tan²x = sec²x</span></div>
+          <div class="id-row"><span class="id-eq">1 + cot²x = csc²x</span></div>
+        </div>
+      </div>
+
+      <div class="id-group">
+        <div class="id-group-title" onclick="toggleIdGroup(this)"><span>&#9656;</span> Sum &amp; Difference</div>
+        <div class="id-group-body">
+          <div class="id-row"><span class="id-eq">sin(a ± b) = sin a cos b ± cos a sin b</span></div>
+          <div class="id-row"><span class="id-eq">cos(a ± b) = cos a cos b ∓ sin a sin b</span></div>
+          <div class="id-row"><span class="id-eq">tan(a ± b) = (tan a ± tan b) / (1 ∓ tan a tan b)</span></div>
+        </div>
+      </div>
+
+      <div class="id-group">
+        <div class="id-group-title" onclick="toggleIdGroup(this)"><span>&#9656;</span> Double Angle</div>
+        <div class="id-group-body">
+          <div class="id-row"><span class="id-eq">sin(2x) = 2 sin x cos x</span></div>
+          <div class="id-row"><span class="id-eq">cos(2x) = cos²x − sin²x</span></div>
+          <div class="id-row"><span class="id-eq">cos(2x) = 2cos²x − 1 = 1 − 2sin²x</span></div>
+          <div class="id-row"><span class="id-eq">tan(2x) = 2 tan x / (1 − tan²x)</span></div>
+        </div>
+      </div>
+
+      <div class="id-group">
+        <div class="id-group-title" onclick="toggleIdGroup(this)"><span>&#9656;</span> Half Angle</div>
+        <div class="id-group-body">
+          <div class="id-row"><span class="id-eq">sin²x = (1 − cos 2x) / 2</span></div>
+          <div class="id-row"><span class="id-eq">cos²x = (1 + cos 2x) / 2</span></div>
+          <div class="id-row"><span class="id-eq">tan(x/2) = sin x / (1 + cos x)</span></div>
+        </div>
+      </div>
+
+      <div class="id-group">
+        <div class="id-group-title" onclick="toggleIdGroup(this)"><span>&#9656;</span> Product to Sum</div>
+        <div class="id-group-body">
+          <div class="id-row"><span class="id-eq">sin a sin b = ½[cos(a−b) − cos(a+b)]</span></div>
+          <div class="id-row"><span class="id-eq">cos a cos b = ½[cos(a−b) + cos(a+b)]</span></div>
+          <div class="id-row"><span class="id-eq">sin a cos b = ½[sin(a+b) + sin(a−b)]</span></div>
+        </div>
+      </div>
+
+      <div class="id-group">
+        <div class="id-group-title" onclick="toggleIdGroup(this)"><span>&#9656;</span> Euler &amp; Complex</div>
+        <div class="id-group-body">
+          <div class="id-row"><span class="id-eq">e^(ix) = cos x + i sin x</span></div>
+          <div class="id-row"><span class="id-eq">e^(iπ) + 1 = 0</span><span class="id-note">Euler's identity</span></div>
+          <div class="id-row"><span class="id-eq">cos x = (e^(ix) + e^(−ix)) / 2</span></div>
+          <div class="id-row"><span class="id-eq">sin x = (e^(ix) − e^(−ix)) / 2i</span></div>
+        </div>
+      </div>
+
+      <div class="id-group">
+        <div class="id-group-title" onclick="toggleIdGroup(this)"><span>&#9656;</span> Derivatives</div>
+        <div class="id-group-body">
+          <div class="id-row"><span class="id-eq">d/dx sin x = cos x</span></div>
+          <div class="id-row"><span class="id-eq">d/dx cos x = −sin x</span></div>
+          <div class="id-row"><span class="id-eq">d/dx tan x = sec²x</span></div>
+          <div class="id-row"><span class="id-eq">d/dx eˣ = eˣ</span></div>
+          <div class="id-row"><span class="id-eq">d/dx ln x = 1/x</span></div>
+          <div class="id-row"><span class="id-eq">d/dx xⁿ = n·xⁿ⁻¹</span><span class="id-note">power rule</span></div>
+          <div class="id-row"><span class="id-eq">d/dx f(g(x)) = f′(g(x))·g′(x)</span><span class="id-note">chain rule</span></div>
+        </div>
+      </div>
+
+      <div class="id-group">
+        <div class="id-group-title" onclick="toggleIdGroup(this)"><span>&#9656;</span> Lines &amp; Slopes</div>
+        <div class="id-group-body">
+          <div class="id-row"><span class="id-eq">slope m = Δy / Δx = (y₂−y₁)/(x₂−x₁)</span></div>
+          <div class="id-row"><span class="id-eq">y = mx + b</span><span class="id-note">slope-intercept</span></div>
+          <div class="id-row"><span class="id-eq">y − y₁ = m(x − x₁)</span><span class="id-note">point-slope</span></div>
+          <div class="id-row"><span class="id-eq">x/a + y/b = 1</span><span class="id-note">intercept form</span></div>
+          <div class="id-row"><span class="id-eq">parallel: m₁ = m₂</span></div>
+          <div class="id-row"><span class="id-eq">perpendicular: m₁ · m₂ = −1</span></div>
+          <div class="id-row"><span class="id-eq">dist = |ax₀+by₀+c| / √(a²+b²)</span><span class="id-note">point to line</span></div>
+        </div>
+      </div>
+
+      <div class="id-group">
+        <div class="id-group-title" onclick="toggleIdGroup(this)"><span>&#9656;</span> Waves</div>
+        <div class="id-group-body">
+          <div class="id-row"><span class="id-eq">y = A·sin(ωx + φ) + D</span></div>
+          <div class="id-row"><span class="id-eq">period T = 2π / ω</span></div>
+          <div class="id-row"><span class="id-eq">frequency f = 1 / T = ω / 2π</span></div>
+          <div class="id-row"><span class="id-eq">phase shift = −φ / ω</span></div>
+          <div class="id-row"><span class="id-eq">midline y = D,  range [D−A, D+A]</span></div>
+        </div>
+      </div>
+
+      <div class="id-group">
+        <div class="id-group-title" onclick="toggleIdGroup(this)"><span>&#9656;</span> Conic Sections</div>
+        <div class="id-group-body">
+          <div class="id-row"><span class="id-eq">circle: x² + y² = r²</span></div>
+          <div class="id-row"><span class="id-eq">ellipse: x²/a² + y²/b² = 1</span></div>
+          <div class="id-row"><span class="id-eq">hyperbola: x²/a² − y²/b² = 1</span></div>
+          <div class="id-row"><span class="id-eq">parabola: y = ax² + bx + c</span></div>
+          <div class="id-row id-note-block">Tip: plot conics in parametric mode — circle: <span class="hl-g">r·cos(t), r·sin(t)</span> — ellipse: <span class="hl-g">a·cos(t), b·sin(t)</span></div>
+        </div>
+      </div>
+
+      <div class="id-group">
+        <div class="id-group-title" onclick="toggleIdGroup(this)"><span>&#9656;</span> Useful Limits</div>
+        <div class="id-group-body">
+          <div class="id-row"><span class="id-eq">lim(x→0) sin x / x = 1</span></div>
+          <div class="id-row"><span class="id-eq">lim(x→0) (1−cos x) / x = 0</span></div>
+          <div class="id-row"><span class="id-eq">lim(x→∞) (1 + 1/x)ˣ = e</span></div>
+          <div class="id-row"><span class="id-eq">lim(x→0) (eˣ − 1) / x = 1</span></div>
+        </div>
+      </div>
+
+      <div class="id-group">
+        <div class="id-group-title" onclick="toggleIdGroup(this)"><span>&#9656;</span> Parametric</div>
+        <div class="id-group-body">
+          <div class="id-row"><span class="id-eq">dy/dx = (dy/dt) / (dx/dt)</span><span class="id-note">tangent slope</span></div>
+          <div class="id-row"><span class="id-eq">arc length = ∫√[(dx/dt)²+(dy/dt)²] dt</span></div>
+          <div class="id-row"><span class="id-eq">circle: x=r cos t, y=r sin t</span></div>
+          <div class="id-row"><span class="id-eq">ellipse: x=a cos t, y=b sin t</span></div>
+        </div>
+      </div>
+
+    </div>
+    <div class="sidebar-section">
+      <p class="section-title">Quick presets</p>
+      <div class="preset-grid" id="preset-grid"></div>
+    </div>
+
+    <!-- View controls -->
+    <div class="sidebar-section">
+      <p class="section-title">View</p>
+      <div class="ctrl-row"><span class="ctrl-lbl">zoom</span><input type="range" id="zoom-sl" min="-4" max="4" step="0.05" value="0" oninput="setZoom(this.value)"><span class="ctrl-val" id="zoom-val">1.00×</span></div>
+      <div style="display:flex;gap:5px;margin-top:4px">
+        <button class="tb-btn" onclick="nudgeZoom(1.3)" style="flex:1">zoom in</button>
+        <button class="tb-btn" onclick="nudgeZoom(0.77)" style="flex:1">zoom out</button>
+      </div>
+    </div>
+
+    <!-- Reference -->
+    <div class="sidebar-section">
+      <p class="section-title">Syntax reference</p>
+      <div style="font-size:10px;color:var(--text3);line-height:1.9;column-count:2;column-gap:8px">
+        <div>sin / cos / tan</div><div>asin / acos / atan</div>
+        <div>sqrt(x)</div><div>abs(x)</div>
+        <div>log(x)</div><div>log2 / log10</div>
+        <div>exp(x) = eˣ</div><div>floor / ceil</div>
+        <div>x^2 = x²</div><div>pi, e, phi</div>
+        <div>sign(x)</div><div>mod(x,n)</div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Canvas -->
+  <div id="canvas-wrap">
+    <canvas id="gc"></canvas>
+    <div id="tooltip"></div>
+    <!-- Arrow context popup -->
+    <div id="arrow-popup">
+      <button id="arrow-popup-close" onclick="closeArrowPopup()" title="close">&times;</button>
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
+        <svg width="22" height="22" viewBox="0 0 22 22" style="flex-shrink:0">
+          <polygon points="22,11 8,5 8,17" fill="#f472b6" opacity="0.9"/>
+          <line x1="0" y1="11" x2="18" y2="11" stroke="#f472b6" stroke-width="2.5" stroke-linecap="round"/>
+        </svg>
+        <span style="color:var(--text);font-weight:600;font-size:12px;letter-spacing:.02em">Direction of Travel</span>
+      </div>
+      <p style="color:var(--text2);font-size:11px;line-height:1.7;margin-bottom:8px">
+        This arrow shows the <span style="color:#f472b6;font-weight:500">direction in which the curve is traced</span> as the parameter <span style="color:var(--accent)">t</span> increases from 0 toward its maximum.
+      </p>
+      <div style="background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:8px 10px;font-size:10px;color:var(--text3);line-height:1.8;margin-bottom:8px">
+        <div style="color:var(--text2);font-weight:500;margin-bottom:3px">Why it matters</div>
+        Two different curves can have the <em>same shape</em> but opposite directions of traversal. For example, a clockwise circle and a counter-clockwise circle look identical, but their direction vectors and tangents point opposite ways — critical in physics, animation paths, and vector calculus (e.g. line integrals change sign with direction).
+      </div>
+      <div style="background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:8px 10px;font-size:10px;color:var(--text3);line-height:1.8">
+        <div style="color:var(--text2);font-weight:500;margin-bottom:3px">Try it</div>
+        Compare <span style="color:var(--green)">x(t)=cos(t), y(t)=sin(t)</span> (counter-clockwise) vs <span style="color:var(--green)">x(t)=cos(t), y(t)=&#8722;sin(t)</span> (clockwise) — the arrow flips.
+      </div>
+      <div style="margin-top:10px;font-size:9px;color:var(--text3);text-align:center">The arrow is placed at t&#8776;50% of the curve's range</div>
+    </div>
+  </div>
+
+  <!-- Status bar -->
+  <div id="statusbar">
+    <div class="stat">x: <span class="stat-val" id="sx">—</span></div>
+    <div class="stat">y: <span class="stat-val" id="sy">—</span></div>
+    <div class="stat">f(x): <span class="stat-val" id="sfx">—</span></div>
+    <div class="stat">slope: <span class="stat-hl" id="ssl">—</span></div>
+    <div class="stat">zoom: <span class="stat-val" id="szm">1.00×</span></div>
+    <div style="flex:1"></div>
+    <div class="stat">scroll to zoom · drag to pan · shift+drag for multi-select</div>
+  </div>
+
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/mathjs/12.4.0/math.min.js"></script>
+<script>
+/* ─────────────────────────── State ─────────────────────────── */
+const COLORS = ['#5b8af5','#f59e3d','#3ecf8e','#a78bfa','#f472b6','#2dd4bf','#f56565','#facc15'];
+let mode = 'fn';
+let showGrid=true, showAxes=true, showLabels=true, showSlope=false, showDeriv=false, showZeros=false;
+let pan = {x:0,y:0}, scale = 80;
+let dragging = false, dragStart = {}, panStart = {};
+let mouseCanvasX = null, mouseCanvasY = null;
+let dpr = window.devicePixelRatio || 1;
+
+let fns = [
+  {expr:'x^2',     color:COLORS[0], compiled:null},
+  {expr:'sin(x)',  color:COLORS[1], compiled:null},
+];
+
+const presetList = [
+  {l:'x²',     e:'x^2'},    {l:'x³',     e:'x^3'},
+  {l:'|x|',    e:'abs(x)'},  {l:'√x',     e:'sqrt(x)'},
+  {l:'1/x',    e:'1/x'},     {l:'eˣ',     e:'exp(x)'},
+  {l:'ln x',   e:'log(x)'},  {l:'x·sin x',e:'x*sin(x)'},
+  {l:'sin/x',  e:'sin(x)/x'},{l:'floor x',e:'floor(x)'},
+  {l:'x mod 3',e:'mod(x,3)'},{l:'atan x',  e:'atan(x)'},
+];
+
+/* ─────────────────────────── Math helpers ─────────────────────────── */
+function compileFn(expr) {
+  if (!expr.trim()) return null;
+  try { return math.compile(expr); } catch(e) { return null; }
+}
+const SCOPE = {pi: Math.PI, e: Math.E, phi: 1.6180339887};
+function evalFn(compiled, x) {
+  if (!compiled) return NaN;
+  try {
+    const v = compiled.evaluate({...SCOPE, x});
+    return typeof v === 'number' && isFinite(v) ? v : NaN;
+  } catch(e) { return NaN; }
+}
+function numericalDeriv(compiled, x) {
+  const h = 1e-5;
+  return (evalFn(compiled,x+h) - evalFn(compiled,x-h)) / (2*h);
+}
+
+/* ─────────────────────────── Canvas setup ─────────────────────────── */
+const canvas = document.getElementById('gc');
+const ctx = canvas.getContext('2d');
+const wrap = document.getElementById('canvas-wrap');
+
+function resize() {
+  dpr = window.devicePixelRatio || 1;
+  const r = wrap.getBoundingClientRect();
+  canvas.width  = r.width  * dpr;
+  canvas.height = r.height * dpr;
+  canvas.style.width  = r.width  + 'px';
+  canvas.style.height = r.height + 'px';
+  draw();
+}
+
+/* ─────────────────────────── Coordinate transforms ─────────────────────────── */
+function w2c(wx, wy) {
+  return {
+    x: canvas.width/2  + pan.x + wx * scale,
+    y: canvas.height/2 + pan.y - wy * scale
+  };
+}
+function c2w(cx, cy) {
+  return {
+    x:  (cx - canvas.width/2  - pan.x) / scale,
+    y: -(cy - canvas.height/2 - pan.y) / scale
+  };
+}
+
+/* ─────────────────────────── Main draw ─────────────────────────── */
+function draw() {
+  const W = canvas.width, H = canvas.height;
+  ctx.clearRect(0,0,W,H);
+
+  const cx0 = W/2 + pan.x, cy0 = H/2 + pan.y;
+  const gCol  = 'rgba(255,255,255,0.055)';
+  const aCol  = 'rgba(255,255,255,0.22)';
+  const tCol  = 'rgba(255,255,255,0.35)';
+  const t2Col = 'rgba(255,255,255,0.18)';
+
+  /* Grid */
+  const step = niceStep(70 / scale);
+  const xs0 = Math.floor((-cx0)/scale/step)*step;
+  const xs1 = Math.ceil((W-cx0)/scale/step)*step;
+  const ys0 = Math.floor((cy0-H)/scale/step)*step;
+  const ys1 = Math.ceil(cy0/scale/step)*step;
+
+  if (showGrid) {
+    ctx.strokeStyle = gCol; ctx.lineWidth = 1;
+    for (let x = xs0; x <= xs1; x += step) {
+      const px = cx0 + x*scale;
+      ctx.beginPath(); ctx.moveTo(px,0); ctx.lineTo(px,H); ctx.stroke();
+    }
+    for (let y = ys0; y <= ys1; y += step) {
+      const py = cy0 - y*scale;
+      ctx.beginPath(); ctx.moveTo(0,py); ctx.lineTo(W,py); ctx.stroke();
+    }
+    /* Sub-grid at 1/5 */
+    if (step*scale > 40) {
+      ctx.strokeStyle = 'rgba(255,255,255,0.025)'; ctx.lineWidth = 0.5;
+      const ss = step/5;
+      for (let x = xs0; x <= xs1; x += ss) {
+        const px = cx0 + x*scale;
+        ctx.beginPath(); ctx.moveTo(px,0); ctx.lineTo(px,H); ctx.stroke();
+      }
+      for (let y = ys0; y <= ys1; y += ss) {
+        const py = cy0 - y*scale;
+        ctx.beginPath(); ctx.moveTo(0,py); ctx.lineTo(W,py); ctx.stroke();
+      }
+    }
+  }
+
+  /* Axes */
+  if (showAxes) {
+    ctx.strokeStyle = aCol; ctx.lineWidth = 1.2;
+    ctx.beginPath(); ctx.moveTo(0,cy0); ctx.lineTo(W,cy0); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(cx0,0); ctx.lineTo(cx0,H); ctx.stroke();
+    /* Arrowheads */
+    ctx.fillStyle = aCol;
+    const as = 6*dpr;
+    ctx.beginPath(); ctx.moveTo(W,cy0); ctx.lineTo(W-as,cy0-as/2); ctx.lineTo(W-as,cy0+as/2); ctx.closePath(); ctx.fill();
+    ctx.beginPath(); ctx.moveTo(cx0,0); ctx.lineTo(cx0-as/2,as); ctx.lineTo(cx0+as/2,as); ctx.closePath(); ctx.fill();
+    /* Tick marks */
+    ctx.strokeStyle = t2Col; ctx.lineWidth = 0.8;
+    for (let x = xs0; x <= xs1; x += step) {
+      if (Math.abs(x) < 1e-10) continue;
+      const px = cx0 + x*scale;
+      ctx.beginPath(); ctx.moveTo(px,cy0-3*dpr); ctx.lineTo(px,cy0+3*dpr); ctx.stroke();
+    }
+    for (let y = ys0; y <= ys1; y += step) {
+      if (Math.abs(y) < 1e-10) continue;
+      const py = cy0 - y*scale;
+      ctx.beginPath(); ctx.moveTo(cx0-3*dpr,py); ctx.lineTo(cx0+3*dpr,py); ctx.stroke();
+    }
+  }
+
+  /* Labels */
+  if (showLabels) {
+    ctx.fillStyle = tCol;
+    ctx.font = `${10*dpr}px 'JetBrains Mono', monospace`;
+    ctx.textAlign = 'center';
+    for (let x = xs0; x <= xs1; x += step) {
+      if (Math.abs(x) < 1e-10) continue;
+      const px = cx0 + x*scale;
+      const ly = Math.max(cy0+12*dpr, H-14*dpr);
+      ctx.fillText(fmt(x), px, ly);
+    }
+    ctx.textAlign = 'right';
+    for (let y = ys0; y <= ys1; y += step) {
+      if (Math.abs(y) < 1e-10) continue;
+      const py = cy0 - y*scale;
+      ctx.fillText(fmt(y), Math.max(cx0-5*dpr,24*dpr), py+3.5*dpr);
+    }
+    /* Axis labels */
+    ctx.textAlign = 'left'; ctx.fillStyle = aCol;
+    ctx.font = `${11*dpr}px 'Syne', sans-serif`;
+    ctx.fillText('x', W-14*dpr, cy0-7*dpr);
+    ctx.fillText('y', cx0+7*dpr, 13*dpr);
+    /* Origin */
+    ctx.textAlign = 'right'; ctx.fillStyle = t2Col;
+    ctx.font = `${9*dpr}px 'JetBrains Mono', monospace`;
+    ctx.fillText('0', cx0-4*dpr, cy0+11*dpr);
+  }
+
+  /* Mode dispatchers */
+  if (mode === 'fn')    drawFunctions(W,H,cx0,cy0);
+  if (mode === 'line')  drawLine(W,H,cx0,cy0);
+  if (mode === 'wave')  drawWave(W,H,cx0,cy0);
+  if (mode === 'param') drawParam(W,H,cx0,cy0);
+
+  /* Overlays */
+  if (showDeriv && mode === 'fn') drawDerivatives(W,H,cx0,cy0);
+  if (showZeros && mode === 'fn') drawZeros(W,H,cx0,cy0);
+  if (showSlope && mouseCanvasX !== null && mode === 'fn') drawTangent(W,H,cx0,cy0);
+  if (mouseCanvasX !== null) updateHover();
+
+  updateWaveEq();
+  updateLineEq();
+}
+
+/* ─────────────────────────── f(x) ─────────────────────────── */
+function drawFunctions(W,H,cx0,cy0) {
+  fns.forEach((f,fi) => {
+    if (!f.expr) return;
+    if (!f.compiled) f.compiled = compileFn(f.expr);
+    if (!f.compiled) { markErr(fi,true); return; }
+    markErr(fi,false);
+    ctx.strokeStyle = f.color; ctx.lineWidth = 1.8*dpr;
+    ctx.beginPath(); let started=false, prevY=null;
+    for (let px=0; px<=W; px++) {
+      const wx = (px-cx0)/scale;
+      const wy = evalFn(f.compiled, wx);
+      if (!isFinite(wy) || Math.abs(wy)>1e5) { started=false; prevY=null; continue; }
+      const py = cy0 - wy*scale;
+      /* Discontinuity guard: don't draw if jump is too large */
+      if (prevY !== null && Math.abs(py-prevY) > H*1.5) { ctx.moveTo(px,py); prevY=py; continue; }
+      if (!started) { ctx.moveTo(px,py); started=true; } else { ctx.lineTo(px,py); }
+      prevY=py;
+    }
+    ctx.stroke();
+    /* Function label */
+    if (showLabels && f.expr) {
+      const lx = W-50*dpr, wx=(lx-cx0)/scale, wy=evalFn(f.compiled,wx);
+      if (isFinite(wy) && Math.abs(wy)<1e4) {
+        const ly=cy0-wy*scale;
+        ctx.save(); ctx.fillStyle=f.color; ctx.font=`${10*dpr}px 'JetBrains Mono',monospace`;
+        ctx.textAlign='right'; ctx.globalAlpha=0.85;
+        ctx.fillText(f.expr, lx-4, ly-7*dpr); ctx.restore();
+      }
+    }
+  });
+}
+
+function markErr(i,isErr) {
+  const rows = document.querySelectorAll('#fn-list .fn-row');
+  if(rows[i]) rows[i].classList.toggle('fn-err',isErr);
+}
+
+function drawDerivatives(W,H,cx0,cy0) {
+  fns.forEach(f => {
+    if (!f.compiled) return;
+    ctx.strokeStyle = f.color; ctx.lineWidth = dpr; ctx.setLineDash([4*dpr,4*dpr]);
+    ctx.globalAlpha = 0.5;
+    ctx.beginPath(); let started=false;
+    for (let px=0; px<=W; px+=2) {
+      const wx=(px-cx0)/scale, dy=numericalDeriv(f.compiled,wx);
+      if (!isFinite(dy)||Math.abs(dy)>5e3) { started=false; continue; }
+      const py=cy0-dy*scale;
+      if (!started){ctx.moveTo(px,py);started=true}else{ctx.lineTo(px,py);}
+    }
+    ctx.stroke(); ctx.globalAlpha=1; ctx.setLineDash([]);
+  });
+}
+
+function drawZeros(W,H,cx0,cy0) {
+  fns.forEach(f => {
+    if (!f.compiled) return;
+    const step=2*Math.PI/scale;
+    let prevY=null, prevX=null;
+    for (let px=0; px<=W; px+=2) {
+      const wx=(px-cx0)/scale, wy=evalFn(f.compiled,wx);
+      if (!isFinite(wy)){prevY=null;prevX=null;continue;}
+      if (prevY!==null && prevY*wy<0) {
+        /* Bisect for accurate zero */
+        let a=prevX,b=wx,fa=prevY;
+        for(let k=0;k<20;k++){const m=(a+b)/2,fm=evalFn(f.compiled,m);if(Math.abs(fm)<1e-9)break;if(fa*fm<=0){b=m}else{a=m;fa=fm;}}
+        const zx=(a+b)/2, zpx=cx0+zx*scale;
+        ctx.beginPath(); ctx.arc(zpx,cy0,4*dpr,0,Math.PI*2);
+        ctx.strokeStyle=f.color; ctx.lineWidth=1.5*dpr; ctx.stroke();
+        ctx.fillStyle='rgba(13,14,18,0.9)'; ctx.fill();
+        if(showLabels){ctx.fillStyle=f.color;ctx.font=`${9*dpr}px 'JetBrains Mono',monospace`;ctx.textAlign='center';ctx.fillText(fmt(zx),zpx,cy0-8*dpr);}
+      }
+      prevY=wy; prevX=wx;
+    }
+  });
+}
+
+function drawTangent(W,H,cx0,cy0) {
+  if (!fns.length||!fns[0].expr) return;
+  const compiled = fns[0].compiled; if(!compiled)return;
+  const wx = (mouseCanvasX - cx0)/scale;
+  const wy = evalFn(compiled,wx); if(!isFinite(wy))return;
+  const slope = numericalDeriv(compiled,wx); if(!isFinite(slope))return;
+  const px=cx0+wx*scale, py=cy0-wy*scale;
+
+  /* Tangent line */
+  ctx.strokeStyle='rgba(245,158,61,0.65)'; ctx.lineWidth=1.2*dpr; ctx.setLineDash([5*dpr,4*dpr]);
+  const ext=W;
+  ctx.beginPath(); ctx.moveTo(px-ext, py+slope*ext); ctx.lineTo(px+ext, py-slope*ext); ctx.stroke();
+  ctx.setLineDash([]);
+
+  /* Normal line */
+  if (Math.abs(slope)>1e-9) {
+    const nSlope=-1/slope;
+    ctx.strokeStyle='rgba(167,139,250,0.35)'; ctx.lineWidth=dpr; ctx.setLineDash([3*dpr,5*dpr]);
+    ctx.beginPath(); ctx.moveTo(px-100*dpr, py+nSlope*100*dpr); ctx.lineTo(px+100*dpr, py-nSlope*100*dpr); ctx.stroke();
+    ctx.setLineDash([]);
+  }
+
+  /* Point */
+  ctx.beginPath(); ctx.arc(px,py,5*dpr,0,Math.PI*2);
+  ctx.fillStyle='#f59e3d'; ctx.fill();
+  ctx.strokeStyle='rgba(13,14,18,0.8)'; ctx.lineWidth=1.5*dpr; ctx.stroke();
+
+  /* Slope label */
+  ctx.save(); ctx.fillStyle='#f59e3d';
+  ctx.font=`${10*dpr}px 'JetBrains Mono',monospace`;
+  ctx.textAlign=px>W*0.7?'right':'left';
+  const lx=px>W*0.7?px-8*dpr:px+8*dpr;
+  ctx.fillText(`m=${slope.toFixed(4)}`, lx, py-8*dpr);
+  ctx.restore();
+
+  /* dx/dy triangle */
+  const bLen=40*dpr;
+  const tx=px+bLen, ty=py-slope*bLen;
+  ctx.strokeStyle='rgba(245,158,61,0.3)'; ctx.lineWidth=dpr; ctx.setLineDash([]);
+  ctx.beginPath(); ctx.moveTo(px,py); ctx.lineTo(tx,py); ctx.lineTo(tx,ty); ctx.closePath(); ctx.stroke();
+  ctx.fillStyle='rgba(245,158,61,0.08)'; ctx.fill();
+}
+
+/* ─────────────────────────── Line mode ─────────────────────────── */
+function drawLine(W,H,cx0,cy0) {
+  const m=parseFloat(document.getElementById('line-m').value)||0;
+  const b=parseFloat(document.getElementById('line-b').value)||0;
+  /* Shadow */
+  ctx.shadowColor='rgba(91,138,245,0.2)'; ctx.shadowBlur=8*dpr;
+  ctx.strokeStyle=COLORS[0]; ctx.lineWidth=2*dpr;
+  const x0w=(-cx0)/scale, x1w=(W-cx0)/scale;
+  const y0c=cy0-(m*x0w+b)*scale, y1c=cy0-(m*x1w+b)*scale;
+  ctx.beginPath(); ctx.moveTo(0,y0c); ctx.lineTo(W,y1c); ctx.stroke();
+  ctx.shadowBlur=0;
+  /* Y-intercept dot */
+  const bpy=cy0-b*scale;
+  if(bpy>0&&bpy<H){ ctx.beginPath(); ctx.arc(cx0,bpy,5*dpr,0,Math.PI*2); ctx.fillStyle=COLORS[0]; ctx.fill(); if(showLabels){ctx.fillStyle=COLORS[0];ctx.font=`${10*dpr}px 'JetBrains Mono',monospace`;ctx.textAlign='left';ctx.fillText(`b=${fmt(b)}`,cx0+8*dpr,bpy-6*dpr);} }
+  /* X-intercept dot */
+  if(Math.abs(m)>1e-10){ const xi=-b/m, xpx=cx0+xi*scale; if(xpx>0&&xpx<W){ ctx.beginPath(); ctx.arc(xpx,cy0,5*dpr,0,Math.PI*2); ctx.fillStyle='rgba(91,138,245,0.7)'; ctx.fill(); if(showLabels){ctx.fillStyle=COLORS[0];ctx.font=`${9*dpr}px 'JetBrains Mono',monospace`;ctx.textAlign='center';ctx.fillText(`x=${fmt(xi)}`,xpx,cy0-8*dpr);} } }
+  /* Two-point markers */
+  const p1x=parseFloat(document.getElementById('p1x').value),p1y=parseFloat(document.getElementById('p1y').value);
+  const p2x=parseFloat(document.getElementById('p2x').value),p2y=parseFloat(document.getElementById('p2y').value);
+  [[p1x,p1y],[p2x,p2y]].forEach(([wx,wy])=>{const c=w2c(wx,wy);ctx.beginPath();ctx.arc(c.x,c.y,4*dpr,0,Math.PI*2);ctx.fillStyle='rgba(245,158,61,0.8)';ctx.fill();});
+}
+
+function syncLineSlider(which,val) {
+  document.getElementById(`line-${which}`).value = parseFloat(val).toFixed(2);
+  draw();
+}
+function syncLineNum(which,val) {
+  const v=parseFloat(val); if(isNaN(v))return;
+  document.getElementById(`line-${which}-sl`).value=v;
+  draw();
+}
+function lineFromPoints() {
+  const x1=parseFloat(document.getElementById('p1x').value), y1=parseFloat(document.getElementById('p1y').value);
+  const x2=parseFloat(document.getElementById('p2x').value), y2=parseFloat(document.getElementById('p2y').value);
+  if(Math.abs(x2-x1)<1e-10){document.getElementById('line-pt-info').textContent='vertical line (undefined slope)';return;}
+  const m=(y2-y1)/(x2-x1), b=y1-m*x1;
+  document.getElementById('line-m').value=m.toFixed(4);
+  document.getElementById('line-b').value=b.toFixed(4);
+  document.getElementById('line-m-sl').value=m;
+  document.getElementById('line-b-sl').value=b;
+  const dist=Math.sqrt((x2-x1)**2+(y2-y1)**2);
+  document.getElementById('line-pt-info').textContent=`slope=${fmt(m)}  dist=${fmt(dist)}`;
+  draw();
+}
+function updateLineEq() {
+  if(mode!=='line')return;
+  const m=parseFloat(document.getElementById('line-m').value)||0;
+  const b=parseFloat(document.getElementById('line-b').value)||0;
+  let eq;
+  if(Math.abs(m)<1e-10) eq=`${fmt(b)}`;
+  else if(Math.abs(b)<1e-10) eq=`${fmt(m)}x`;
+  else eq=`${fmt(m)}x ${b>=0?'+':'-'} ${fmt(Math.abs(b))}`;
+  document.getElementById('line-eq').textContent=eq;
+}
+
+/* ─────────────────────────── Wave mode ─────────────────────────── */
+function drawWave(W,H,cx0,cy0) {
+  const type=document.getElementById('wave-type').value;
+  const A=parseFloat(document.getElementById('w-amp').value);
+  const freq=parseFloat(document.getElementById('w-freq').value);
+  const phi=parseFloat(document.getElementById('w-phase').value);
+  const vs=parseFloat(document.getElementById('w-vs').value);
+  ctx.strokeStyle=COLORS[2]; ctx.lineWidth=2*dpr;
+  ctx.beginPath(); let started=false;
+  for(let px=0;px<=W;px+=0.5){
+    const x=(px-cx0)/scale, t=freq*x+phi;
+    let y;
+    if(type==='sin')   y=A*Math.sin(t)+vs;
+    else if(type==='cos')   y=A*Math.cos(t)+vs;
+    else if(type==='tan'){  y=A*Math.tan(t)+vs; if(Math.abs(y)>30){started=false;continue;}}
+    else if(type==='sawtooth') y=A*(2*(t/(2*Math.PI)-Math.floor(0.5+t/(2*Math.PI))))+vs;
+    else if(type==='square')   y=A*Math.sign(Math.sin(t))+vs;
+    else if(type==='triangle') y=A*(2/Math.PI)*Math.asin(Math.sin(t))+vs;
+    const py=cy0-y*scale;
+    if(!started){ctx.moveTo(px,py);started=true;}else{ctx.lineTo(px,py);}
+  }
+  ctx.stroke();
+  /* Period markers */
+  if(showLabels&&freq>0){
+    const period=2*Math.PI/freq;
+    const ppx=period*scale;
+    if(ppx>30*dpr){
+      ctx.strokeStyle='rgba(62,207,142,0.2)'; ctx.lineWidth=0.5*dpr; ctx.setLineDash([3*dpr,4*dpr]);
+      const startX=Math.ceil((-cx0/scale-phi/freq)/period)*period;
+      for(let k=0;k<20;k++){
+        const wx=startX+k*period, px=cx0+wx*scale;
+        if(px>W+ppx)break;
+        ctx.beginPath();ctx.moveTo(px,0);ctx.lineTo(px,H);ctx.stroke();
+      }
+      ctx.setLineDash([]);
+    }
+  }
+}
+function wv(){
+  document.getElementById('w-amp-v').textContent=parseFloat(document.getElementById('w-amp').value).toFixed(1);
+  document.getElementById('w-freq-v').textContent=parseFloat(document.getElementById('w-freq').value).toFixed(1);
+  document.getElementById('w-phase-v').textContent=parseFloat(document.getElementById('w-phase').value).toFixed(2);
+  document.getElementById('w-vs-v').textContent=parseFloat(document.getElementById('w-vs').value).toFixed(1);
+  draw();
+}
+function updateWaveEq(){
+  if(mode!=='wave')return;
+  const type=document.getElementById('wave-type').value;
+  const A=parseFloat(document.getElementById('w-amp').value).toFixed(2);
+  const f=parseFloat(document.getElementById('w-freq').value).toFixed(2);
+  const phi=parseFloat(document.getElementById('w-phase').value).toFixed(3);
+  const vs=parseFloat(document.getElementById('w-vs').value).toFixed(2);
+  const period=Math.abs(parseFloat(f))>1e-10?(2*Math.PI/parseFloat(f)).toFixed(3):'∞';
+  document.getElementById('w-period').textContent=period;
+  let eq=`${A}·${type}(${f}x`;
+  if(Math.abs(parseFloat(phi))>0.001) eq+=` + ${phi}`;
+  eq+=')';
+  if(Math.abs(parseFloat(vs))>0.001) eq+=` ${parseFloat(vs)>=0?'+':'-'} ${Math.abs(parseFloat(vs)).toFixed(2)}`;
+  document.getElementById('wave-eq').textContent=eq;
+}
+
+/* ─────────────────────────── Parametric mode ─────────────────────────── */
+let arrowHitbox = null; // {x, y, r} in canvas px — set each frame
+
+function drawParam(W,H,cx0,cy0) {
+  arrowHitbox = null;
+  const xExpr=document.getElementById('param-x').value;
+  const yExpr=document.getElementById('param-y').value;
+  const tMax=parseFloat(document.getElementById('param-t').value)||6.28;
+  const steps=parseInt(document.getElementById('param-step').value)||1200;
+  const pscale=parseFloat(document.getElementById('param-scale').value)||1;
+  let cx,cy;
+  try{cx=math.compile(xExpr);cy=math.compile(yExpr);}catch(e){return;}
+  const grad=ctx.createLinearGradient(0,0,W,H);
+  grad.addColorStop(0,COLORS[4]); grad.addColorStop(1,COLORS[5]);
+  ctx.strokeStyle=grad; ctx.lineWidth=1.8*dpr;
+  ctx.beginPath(); let started=false;
+  for(let i=0;i<=steps;i++){
+    const t=tMax*i/steps;
+    try{
+      const scope={...SCOPE,t};
+      const wx=cx.evaluate(scope)*pscale, wy=cy.evaluate(scope)*pscale;
+      if(!isFinite(wx)||!isFinite(wy)){started=false;continue;}
+      const px=cx0+wx*scale, py=cy0-wy*scale;
+      if(!started){ctx.moveTo(px,py);started=true;}else{ctx.lineTo(px,py);}
+    }catch(e){started=false;}
+  }
+  ctx.stroke();
+
+  /* Direction arrow — clickable, stores hitbox */
+  if(started){
+    const t0=tMax*0.48, t1=tMax*0.5;
+    try{
+      const s0={...SCOPE,t:t0}, s1={...SCOPE,t:t1};
+      const x0=cx.evaluate(s0)*pscale, y0=cy.evaluate(s0)*pscale;
+      const x1=cx.evaluate(s1)*pscale, y1=cy.evaluate(s1)*pscale;
+      const px0=cx0+x0*scale, py0=cy0-y0*scale;
+      const px1=cx0+x1*scale, py1=cy0-y1*scale;
+      const ang=Math.atan2(py1-py0,px1-px0);
+      const arrowLen=13*dpr, arrowHalf=6*dpr;
+      const hitR=18*dpr;
+
+      /* Outer pulse ring (shows interactivity) */
+      const isHovered = arrowHitbox===null ? false :
+        (mouseCanvasX!==null && Math.hypot(mouseCanvasX-px1, mouseCanvasY-py1)<hitR);
+      if(isHovered){
+        ctx.beginPath(); ctx.arc(px1,py1,hitR,0,Math.PI*2);
+        ctx.strokeStyle='rgba(244,114,182,0.35)'; ctx.lineWidth=1.5*dpr;
+        ctx.setLineDash([3*dpr,3*dpr]); ctx.stroke(); ctx.setLineDash([]);
+      } else {
+        ctx.beginPath(); ctx.arc(px1,py1,hitR*0.65,0,Math.PI*2);
+        ctx.strokeStyle='rgba(244,114,182,0.18)'; ctx.lineWidth=dpr; ctx.stroke();
+      }
+
+      /* Arrow body */
+      ctx.save(); ctx.translate(px1,py1); ctx.rotate(ang);
+      ctx.fillStyle=COLORS[4];
+      ctx.beginPath(); ctx.moveTo(0,0); ctx.lineTo(-arrowLen,-arrowHalf); ctx.lineTo(-arrowLen,arrowHalf); ctx.closePath(); ctx.fill();
+      /* Small stem */
+      ctx.strokeStyle=COLORS[4]; ctx.lineWidth=2*dpr; ctx.lineCap='round';
+      ctx.beginPath(); ctx.moveTo(-arrowLen,0); ctx.lineTo(-arrowLen-8*dpr,0); ctx.stroke();
+      ctx.restore();
+
+      /* Click-me hint label on first render */
+      ctx.save(); ctx.fillStyle='rgba(244,114,182,0.55)';
+      ctx.font=`${8.5*dpr}px 'JetBrains Mono',monospace`; ctx.textAlign='center';
+      ctx.fillText('click', px1, py1+hitR+7*dpr); ctx.restore();
+
+      /* Store hitbox for click & hover detection */
+      arrowHitbox = {x:px1, y:py1, r:hitR};
+    }catch(e){}
+  }
+}
+function setParam(xExpr,yExpr,tMax,pscale){
+  document.getElementById('param-x').value=xExpr;
+  document.getElementById('param-y').value=yExpr;
+  if(tMax){document.getElementById('param-t').value=tMax;document.getElementById('param-t-v').textContent=tMax.toFixed(2);}
+  if(pscale){document.getElementById('param-scale').value=pscale;document.getElementById('param-scale-v').textContent=pscale.toFixed(1);}
+  draw();
+}
+
+/* ─────────────────────────── Function list UI ─────────────────────────── */
+function renderFnList() {
+  const el=document.getElementById('fn-list');
+  el.innerHTML='';
+  fns.forEach((f,i)=>{
+    const row=document.createElement('div');
+    row.className='fn-row';
+    row.innerHTML=`<div class="fn-dot" style="background:${f.color}" title="change color" onclick="cycleFnColor(${i})"></div>
+      <input class="fn-input" value="${f.expr}" placeholder="e.g. x^2 + sin(x)">
+      <button class="fn-del" title="remove">×</button>`;
+    row.querySelector('input').addEventListener('input',e=>{fns[i].expr=e.target.value;fns[i].compiled=compileFn(e.target.value);draw();});
+    row.querySelector('.fn-del').onclick=()=>removeFn(i);
+    el.appendChild(row);
+  });
+}
+function addFn(expr){
+  fns.push({expr,color:COLORS[fns.length%COLORS.length],compiled:compileFn(expr)});
+  renderFnList();draw();
+  const inputs=document.querySelectorAll('#fn-list .fn-input');
+  if(inputs.length)inputs[inputs.length-1].focus();
+}
+function removeFn(i){fns.splice(i,1);renderFnList();draw();}
+function cycleFnColor(i){const ci=COLORS.indexOf(fns[i].color);fns[i].color=COLORS[(ci+1)%COLORS.length];renderFnList();draw();}
+
+function buildPresets(){
+  const g=document.getElementById('preset-grid');
+  presetList.forEach(p=>{
+    const b=document.createElement('button');
+    b.className='preset-btn';b.textContent=p.l;
+    b.onclick=()=>{if(mode==='fn')addFn(p.e);};
+    g.appendChild(b);
+  });
+}
+
+/* ─────────────────────────── Mode switcher ─────────────────────────── */
+function setMode(m) {
+  mode = (m === 'ids') ? mode : m; // identities tab doesn't change drawing mode
+  ['fn','line','wave','param','ids'].forEach(x=>{
+    const panel=document.getElementById(`${x}-panel`);
+    if(panel) panel.style.display = x===m ? 'block' : 'none';
+    document.getElementById(`mode-${x}`)?.classList.toggle('active', x===m);
+  });
+  if(m !== 'ids') draw();
+}
+function toggleIdGroup(titleEl) {
+  titleEl.classList.toggle('open');
+  titleEl.nextElementSibling.classList.toggle('open');
+}
+function toggle(key,btn) {
+  if(key==='grid')   showGrid  =!showGrid;
+  if(key==='axes')   showAxes  =!showAxes;
+  if(key==='labels') showLabels=!showLabels;
+  if(key==='slope')  showSlope =!showSlope;
+  if(key==='deriv')  showDeriv =!showDeriv;
+  if(key==='zeros')  showZeros =!showZeros;
+  btn.classList.toggle('on');draw();
+}
+
+/* ─────────────────────────── View helpers ─────────────────────────── */
+function niceStep(approx){
+  const p=Math.pow(10,Math.floor(Math.log10(approx)));
+  const f=approx/p;
+  if(f<1.5)return p;if(f<3.5)return 2*p;if(f<7.5)return 5*p;return 10*p;
+}
+function fmt(v){
+  if(Math.abs(v)>=10000||Math.abs(v)<0.001&&v!==0)return v.toExponential(1);
+  return parseFloat(v.toFixed(3)).toString();
+}
+function resetView(){
+  pan={x:0,y:0};scale=80;
+  document.getElementById('zoom-sl').value=0;
+  document.getElementById('zoom-val').textContent='1.00×';
+  document.getElementById('szm').textContent='1.00×';
+  draw();
+}
+function setZoom(v){
+  scale=80*Math.pow(2,parseFloat(v));
+  const zStr=(scale/80).toFixed(2)+'×';
+  document.getElementById('zoom-val').textContent=zStr;
+  document.getElementById('szm').textContent=zStr;
+  draw();
+}
+function nudgeZoom(factor){
+  scale*=factor;
+  const logV=Math.log2(scale/80);
+  document.getElementById('zoom-sl').value=logV;
+  const zStr=(scale/80).toFixed(2)+'×';
+  document.getElementById('zoom-val').textContent=zStr;
+  document.getElementById('szm').textContent=zStr;
+  draw();
+}
+function exportPNG(){
+  const link=document.createElement('a');
+  link.download='graph.png';link.href=canvas.toDataURL('image/png');link.click();
+}
+
+/* ─────────────────────────── Hover / status ─────────────────────────── */
+function updateHover(){
+  const w=c2w(mouseCanvasX,mouseCanvasY);
+  document.getElementById('sx').textContent=fmt(w.x);
+  document.getElementById('sy').textContent=fmt(w.y);
+  if(mode==='fn'&&fns.length>0&&fns[0].compiled){
+    const fy=evalFn(fns[0].compiled,w.x);
+    document.getElementById('sfx').textContent=isFinite(fy)?fmt(fy):'—';
+    if(showSlope){
+      const sl=numericalDeriv(fns[0].compiled,w.x);
+      document.getElementById('ssl').textContent=isFinite(sl)?sl.toFixed(4):'—';
+    }
+  }
+}
+
+/* ─────────────────────────── Mouse events ─────────────────────────── */
+canvas.addEventListener('mousemove',e=>{
+  const r=canvas.getBoundingClientRect();
+  mouseCanvasX=(e.clientX-r.left)*dpr;
+  mouseCanvasY=(e.clientY-r.top)*dpr;
+  if(dragging){
+    pan.x=panStart.x+(e.clientX-dragStart.x)*dpr;
+    pan.y=panStart.y+(e.clientY-dragStart.y)*dpr;
+  }
+  /* Cursor: pointer when hovering arrow */
+  if(!dragging){
+    if(arrowHitbox && Math.hypot(mouseCanvasX-arrowHitbox.x, mouseCanvasY-arrowHitbox.y)<arrowHitbox.r){
+      canvas.style.cursor='pointer';
+    } else {
+      canvas.style.cursor='crosshair';
+    }
+  }
+  draw();
+});
+canvas.addEventListener('mouseleave',()=>{
+  mouseCanvasX=null;mouseCanvasY=null;
+  ['sx','sy','sfx','ssl'].forEach(id=>document.getElementById(id).textContent='—');
+  draw();
+});
+canvas.addEventListener('mousedown',e=>{
+  dragging=true;dragStart={x:e.clientX,y:e.clientY};panStart={...pan};
+  canvas.style.cursor='grabbing';
+});
+canvas.addEventListener('mouseup',()=>{dragging=false;canvas.style.cursor='crosshair';});
+canvas.addEventListener('click',e=>{
+  if(mode!=='param'||dragging)return;
+  const r=canvas.getBoundingClientRect();
+  const cx=(e.clientX-r.left)*dpr, cy=(e.clientY-r.top)*dpr;
+  if(arrowHitbox && Math.hypot(cx-arrowHitbox.x, cy-arrowHitbox.y)<arrowHitbox.r){
+    document.getElementById('arrow-popup').classList.add('visible');
+  }
+});
+function closeArrowPopup(){document.getElementById('arrow-popup').classList.remove('visible');}
+canvas.addEventListener('wheel',e=>{
+  e.preventDefault();
+  const r=canvas.getBoundingClientRect();
+  const mx=(e.clientX-r.left)*dpr, my=(e.clientY-r.top)*dpr;
+  const {x:wx,y:wy}=c2w(mx,my);
+  const factor=e.deltaY<0?1.12:0.893;
+  scale*=factor;
+  pan.x=mx-canvas.width/2-wx*scale;
+  pan.y=my-canvas.height/2+wy*scale;
+  const zStr=(scale/80).toFixed(2)+'×';
+  document.getElementById('zoom-sl').value=Math.log2(scale/80);
+  document.getElementById('zoom-val').textContent=zStr;
+  document.getElementById('szm').textContent=zStr;
+  draw();
+},{passive:false});
+
+/* Touch support */
+let lastTouchDist=null,lastTouchMid=null;
+canvas.addEventListener('touchstart',e=>{
+  e.preventDefault();
+  if(e.touches.length===1){
+    const t=e.touches[0],r=canvas.getBoundingClientRect();
+    dragging=true;dragStart={x:t.clientX,y:t.clientY};panStart={...pan};
+  } else if(e.touches.length===2){
+    const dx=e.touches[0].clientX-e.touches[1].clientX;
+    const dy=e.touches[0].clientY-e.touches[1].clientY;
+    lastTouchDist=Math.sqrt(dx*dx+dy*dy);
+    lastTouchMid={x:(e.touches[0].clientX+e.touches[1].clientX)/2,y:(e.touches[0].clientY+e.touches[1].clientY)/2};
+  }
+},{passive:false});
+canvas.addEventListener('touchmove',e=>{
+  e.preventDefault();
+  const r=canvas.getBoundingClientRect();
+  if(e.touches.length===1&&dragging){
+    const t=e.touches[0];
+    pan.x=panStart.x+(t.clientX-dragStart.x)*dpr;
+    pan.y=panStart.y+(t.clientY-dragStart.y)*dpr;
+  } else if(e.touches.length===2){
+    const dx=e.touches[0].clientX-e.touches[1].clientX;
+    const dy=e.touches[0].clientY-e.touches[1].clientY;
+    const dist=Math.sqrt(dx*dx+dy*dy);
+    if(lastTouchDist){scale*=dist/lastTouchDist;}
+    lastTouchDist=dist;
+  }
+  draw();
+},{passive:false});
+canvas.addEventListener('touchend',()=>{dragging=false;lastTouchDist=null;});
+
+/* ─────────────────────────── Keyboard shortcuts ─────────────────────────── */
+document.addEventListener('keydown',e=>{
+  if(e.key==='Escape')closeArrowPopup();
+  if(e.target.tagName==='INPUT'||e.target.tagName==='SELECT')return;
+  if(e.key==='+'||e.key==='=')nudgeZoom(1.2);
+  if(e.key==='-')nudgeZoom(0.83);
+  if(e.key==='r'||e.key==='R')resetView();
+  if(e.key==='g')toggle('grid',document.getElementById('tgl-grid'));
+  if(e.key==='t')toggle('slope',document.getElementById('tgl-slope'));
+  if(e.key==='d')toggle('deriv',document.getElementById('tgl-deriv'));
+  if(e.key==='z')toggle('zeros',document.getElementById('tgl-zeros'));
+  if(e.key==='ArrowRight')pan.x-=30*dpr,draw();
+  if(e.key==='ArrowLeft')pan.x+=30*dpr,draw();
+  if(e.key==='ArrowUp')pan.y+=30*dpr,draw();
+  if(e.key==='ArrowDown')pan.y-=30*dpr,draw();
+});
+
+/* ─────────────────────────── Init ─────────────────────────── */
+fns.forEach(f=>f.compiled=compileFn(f.expr));
+renderFnList();
+buildPresets();
+setMode('fn');
+new ResizeObserver(resize).observe(wrap);
+setTimeout(resize,60);
+</script>
+</body>
+</html>
